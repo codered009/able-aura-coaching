@@ -1,0 +1,360 @@
+// Production schema — MySQL 8 on Amazon RDS.
+// Apply prisma/sql/*.mysql.sql in order (001 → 004), then:
+//   DATABASE_URL="mysql://..." npx prisma generate --schema prisma/schema.mysql.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Existing Able Aura core (RDS MySQL)
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Existing Able Aura core (must remain compatible with RDS MySQL)
+// ---------------------------------------------------------------------------
+
+model PersonEntity {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User?
+
+  @@map("person_entities")
+}
+
+model User {
+  id             String       @id @default(cuid())
+  personEntityId String       @unique @map("person_entity_id")
+  personEntity   PersonEntity @relation(fields: [personEntityId], references: [id], onDelete: Restrict)
+  role           String
+  name           String
+  phone          String       @unique
+  email          String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  childrenAsFather Student[] @relation("Father")
+  childrenAsMother Student[] @relation("Mother")
+  linkedStudent    Student?  @relation("StudentUser")
+
+  sessionsAsMainTrainer Session[]            @relation("MainTrainer")
+  sessionParticipations SessionParticipant[]
+  reviewedAiEvents      AiAnalysisEvent[]    @relation("AiReviewer")
+  progressReportsAuthored ProgressReport[]   @relation("ReportAuthor")
+  videoUploads          TrainingVideoUpload[]
+  auditLogs             AuditLog[]
+  otpChallenges         OtpChallenge[]
+  consentsGiven         ParentalConsent[]    @relation("ConsentGiver")
+  privateAudioAsTrainer PrivateAudioChannel[] @relation("PrivateAudioTrainer")
+  recordingsRequested   SessionRecording[]   @relation("RecordingRequester")
+
+  @@index([role])
+  @@map("users")
+}
+
+model Student {
+  id               String    @id @default(cuid())
+  fathersId        String?   @map("fathers_id")
+  mothersId        String?   @map("mothers_id")
+  father           User?     @relation("Father", fields: [fathersId], references: [id], onDelete: SetNull)
+  mother           User?     @relation("Mother", fields: [mothersId], references: [id], onDelete: SetNull)
+  name             String
+  dateOfBirth      DateTime  @map("date_of_birth")
+  disabilityNotes  String?   @map("disability_notes")
+  baselinePosture  String?   @map("baseline_posture")
+  userId           String?   @unique @map("user_id")
+  linkedUser       User?     @relation("StudentUser", fields: [userId], references: [id], onDelete: SetNull)
+
+  enrollments       Enrollment[]
+  subscriptions     StudentSubscription[]
+  sessionParticipations SessionParticipant[]
+  aiEvents          AiAnalysisEvent[]
+  progressReports   ProgressReport[]
+  consents          ParentalConsent[]
+  privateAudioChannels PrivateAudioChannel[]
+
+  @@map("students")
+}
+
+model Course {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+
+  enrollments     Enrollment[]
+  sessions        Session[]
+  progressReports ProgressReport[]
+
+  @@map("courses")
+}
+
+model Enrollment {
+  id         String   @id @default(cuid())
+  studentId  String   @map("student_id")
+  student    Student  @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  courseId   String   @map("course_id")
+  course     Course   @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  status     String
+  enrolledAt DateTime @default(now()) @map("enrolled_at")
+
+  sessions        Session[]
+  progressReports ProgressReport[]
+
+  @@unique([studentId, courseId])
+  @@index([courseId, status])
+  @@map("enrollments")
+}
+
+model StudentSubscription {
+  id              String    @id @default(cuid())
+  studentId       String    @map("student_id")
+  student         Student   @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  planOrCourseRef String    @map("plan_or_course_ref")
+  status          String
+  startDate       DateTime  @map("start_date")
+  endDate         DateTime  @map("end_date")
+
+  payments        Payment[]
+  pendingPayments PendingPayment[]
+
+  @@index([studentId, status])
+  @@map("student_subscriptions")
+}
+
+model Payment {
+  id                   String              @id @default(cuid())
+  studentSubscriptionId String             @map("student_subscription_id")
+  subscription         StudentSubscription @relation(fields: [studentSubscriptionId], references: [id], onDelete: Restrict)
+  amount               Int
+  status               String
+  paidAt               DateTime?           @map("paid_at")
+  providerRef          String?             @map("provider_ref")
+
+  @@map("payments")
+}
+
+model PendingPayment {
+  id                    String              @id @default(cuid())
+  studentSubscriptionId String              @map("student_subscription_id")
+  subscription          StudentSubscription @relation(fields: [studentSubscriptionId], references: [id], onDelete: Restrict)
+  amount                Int
+  dueDate               DateTime            @map("due_date")
+  status                String
+
+  @@map("pending_payments")
+}
+
+// ---------------------------------------------------------------------------
+// New coaching, AI, privacy, and audit tables
+// ---------------------------------------------------------------------------
+
+model Exercise {
+  id              String  @id @default(cuid())
+  name            String
+  slug            String  @unique
+  description     String
+  idealAnglesJson String  @map("ideal_angles_json")
+  toleranceBands  String  @map("tolerance_bands")
+  isActive        Boolean @default(true) @map("is_active")
+  cueHints        String  @default("[]") @map("cue_hints")
+
+  sessions        Session[]
+  poseTemplates   PoseTemplate[]
+  aiEvents        AiAnalysisEvent[]
+  videoUploads    TrainingVideoUpload[]
+
+  @@map("exercises")
+}
+
+model Session {
+  id              String    @id @default(cuid())
+  mainTrainerId   String    @map("main_trainer_id")
+  mainTrainer     User      @relation("MainTrainer", fields: [mainTrainerId], references: [id], onDelete: Restrict)
+  courseId        String    @map("course_id")
+  course          Course    @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  enrollmentId    String?   @map("enrollment_id")
+  enrollment      Enrollment? @relation(fields: [enrollmentId], references: [id], onDelete: SetNull)
+  startTime       DateTime  @map("start_time")
+  status          String    @default("draft")
+  currentExerciseId String? @map("current_exercise_id")
+  currentExercise Exercise? @relation(fields: [currentExerciseId], references: [id], onDelete: SetNull)
+  title           String
+  joinCode        String    @unique @map("join_code")
+  recordingConsentRequired Boolean @default(true) @map("recording_consent_required")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  endedAt         DateTime? @map("ended_at")
+
+  participants     SessionParticipant[]
+  aiEvents         AiAnalysisEvent[]
+  progressReports  ProgressReport[]
+  privateChannels  PrivateAudioChannel[]
+  recordings       SessionRecording[]
+
+  @@index([courseId, status])
+  @@index([mainTrainerId, startTime])
+  @@map("sessions")
+}
+
+model SessionParticipant {
+  id        String    @id @default(cuid())
+  sessionId String    @map("session_id")
+  session   Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  studentId String?   @map("student_id")
+  student   Student?  @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  userId    String?   @map("user_id")
+  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  role      String
+  joinedAt  DateTime  @default(now()) @map("joined_at")
+  leftAt    DateTime? @map("left_at")
+
+  @@index([sessionId, role])
+  @@map("session_participants")
+}
+
+model PoseTemplate {
+  id                 String   @id @default(cuid())
+  exerciseId         String   @map("exercise_id")
+  exercise           Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  version            Int
+  createdFromUpload  Boolean  @default(false) @map("created_from_upload")
+  rulesJson          String   @map("rules_json")
+  modelData          String?  @map("model_data")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  @@unique([exerciseId, version])
+  @@map("pose_templates")
+}
+
+model AiAnalysisEvent {
+  id           String    @id @default(cuid())
+  sessionId    String    @map("session_id")
+  session      Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  studentId    String    @map("student_id")
+  student      Student   @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  exerciseId   String    @map("exercise_id")
+  exercise     Exercise  @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+  severity     String
+  issueType    String    @map("issue_type")
+  suggestedCue String    @map("suggested_cue")
+  timestamp    DateTime  @default(now())
+  metricsJson  String?   @map("metrics_json")
+  reviewedById String?   @map("reviewed_by")
+  reviewedBy   User?     @relation("AiReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt   DateTime? @map("reviewed_at")
+
+  @@index([sessionId, timestamp])
+  @@index([studentId, timestamp])
+  @@map("ai_analysis_events")
+}
+
+model ProgressReport {
+  id           String      @id @default(cuid())
+  studentId    String      @map("student_id")
+  student      Student     @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  sessionId    String?     @map("session_id")
+  session      Session?    @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  enrollmentId String?     @map("enrollment_id")
+  enrollment   Enrollment? @relation(fields: [enrollmentId], references: [id], onDelete: SetNull)
+  courseId     String?     @map("course_id")
+  course       Course?     @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  metricsJson  String      @map("metrics_json")
+  trainerNotes String?     @map("trainer_notes")
+  authorId     String?     @map("author_id")
+  author       User?       @relation("ReportAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  createdAt    DateTime    @default(now()) @map("created_at")
+
+  @@index([studentId, createdAt])
+  @@map("progress_reports")
+}
+
+model TrainingVideoUpload {
+  id         String    @id @default(cuid())
+  uploaderId String    @map("uploader_id")
+  uploader   User      @relation(fields: [uploaderId], references: [id], onDelete: Restrict)
+  exerciseId String    @map("exercise_id")
+  exercise   Exercise  @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+  videoUrl   String    @map("video_url")
+  status     String    @default("pending")
+  notes      String?
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@map("training_video_uploads")
+}
+
+model ParentalConsent {
+  id         String    @id @default(cuid())
+  studentId  String    @map("student_id")
+  student    Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  grantedById String   @map("granted_by")
+  grantedBy  User      @relation("ConsentGiver", fields: [grantedById], references: [id], onDelete: Restrict)
+  camera     Boolean   @default(false)
+  recording  Boolean   @default(false)
+  aiProcessing Boolean @default(false)
+  grantedAt  DateTime  @default(now()) @map("granted_at")
+  revokedAt  DateTime? @map("revoked_at")
+
+  @@index([studentId])
+  @@map("parental_consents")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?  @map("actor_id")
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  metadata   String   @default("{}")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([entityType, entityId])
+  @@index([actorId, createdAt])
+  @@map("audit_logs")
+}
+
+model OtpChallenge {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone     String
+  codeHash  String    @map("code_hash")
+  expiresAt DateTime  @map("expires_at")
+  consumedAt DateTime? @map("consumed_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([phone, createdAt])
+  @@map("otp_challenges")
+}
+
+model PrivateAudioChannel {
+  id          String    @id @default(cuid())
+  sessionId   String    @map("session_id")
+  session     Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  trainerId   String    @map("trainer_id")
+  trainer     User      @relation("PrivateAudioTrainer", fields: [trainerId], references: [id], onDelete: Restrict)
+  studentId   String    @map("student_id")
+  student     Student   @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  openedAt    DateTime  @default(now()) @map("opened_at")
+  closedAt    DateTime? @map("closed_at")
+
+  @@index([sessionId])
+  @@map("private_audio_channels")
+}
+
+model SessionRecording {
+  id           String    @id @default(cuid())
+  sessionId    String    @map("session_id")
+  session      Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  storageUrl   String    @map("storage_url")
+  requestedById String?  @map("requested_by")
+  requestedBy  User?     @relation("RecordingRequester", fields: [requestedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@map("session_recordings")
+}
