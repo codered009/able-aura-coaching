@@ -1,0 +1,10 @@
+<resources>
+    <style name="Theme.AbleAura" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">#0F4F46</item>
+        <item name="android:navigationBarColor">#0F4F46</item>
+        <item name="android:windowBackground">#F6EFE4</item>
+    </style>
+    <style name="Theme.AbleAura.Tv" parent="Theme.AbleAura">
+        <item name="android:windowBackground">#1C1915</item>
+    </style>
+</resources>
