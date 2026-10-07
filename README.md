@@ -1,5 +1,7 @@
 # Able Aura Online Coaching
 
+**GitHub:** https://github.com/codered009/able-aura-coaching
+
 Subscription SaaS for Able Aura — live group coaching for children with autism, cerebral palsy, and locomotor or cognitive disabilities.
 
 The main trainer broadcasts to everyone. Secondary trainers watch student cameras and speak privately for corrections. On-device posture models flag form **only to trainers**. The AI never speaks to the child.
@@ -43,6 +45,8 @@ If production IDs are `INT`/`BIGINT` rather than string cuids, keep the existing
 ## Run locally
 
 ```bash
+git clone https://github.com/codered009/able-aura-coaching.git
+cd able-aura-coaching
 cp .env.example .env
 npm install
 npx prisma generate
