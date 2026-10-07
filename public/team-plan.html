@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Able Aura Online Coaching — Team plan</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,650&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --cream: #f6efe4;
+      --cream-2: #eee4d4;
+      --ink: #1c1915;
+      --teal: #0f4f46;
+      --teal-deep: #072824;
+      --terracotta: #c45c26;
+      --line: rgba(28, 25, 21, 0.12);
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: var(--cream);
+      color: var(--ink);
+      font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+    }
+    button, a { font-family: inherit; }
+    .deck {
+      height: 100%;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 28px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(246, 239, 228, 0.92);
+      backdrop-filter: blur(8px);
+    }
+    .brand { font-family: "Source Serif 4", Georgia, serif; font-size: 22px; color: var(--teal); }
+    .meta { font-size: 13px; color: rgba(28,25,21,.55); }
+    .slides { position: relative; overflow: hidden; }
+    .slide {
+      position: absolute;
+      inset: 0;
+      padding: 36px 56px 28px;
+      overflow: auto;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(12px);
+      transition: opacity .28s ease, transform .28s ease;
+    }
+    .slide.active { opacity: 1; pointer-events: auto; transform: none; }
+    h1, h2, h3 { font-family: "Source Serif 4", Georgia, serif; font-weight: 650; margin: 0; }
+    h1 { font-size: clamp(36px, 5vw, 64px); line-height: 1.05; color: var(--teal-deep); }
+    h2 { font-size: clamp(28px, 3.4vw, 44px); color: var(--teal-deep); }
+    .kicker {
+      text-transform: uppercase;
+      letter-spacing: .14em;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--terracotta);
+      margin-bottom: 10px;
+    }
+    .lede { font-size: 18px; line-height: 1.5; max-width: 760px; color: rgba(28,25,21,.7); margin-top: 14px; }
+    .grid { display: grid; gap: 14px; margin-top: 28px; }
+    .g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px 18px 16px;
+      box-shadow: 0 1px 0 rgba(255,255,255,.6);
+    }
+    .card h3 { font-size: 20px; margin-bottom: 6px; }
+    .card p, .card li { font-size: 14px; line-height: 1.45; color: rgba(28,25,21,.7); }
+    .days {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      background: #0f4f46;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+    }
+    .days.done { background: #2f6f46; }
+    .days.soft { background: #eee4d4; color: var(--teal); }
+    footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 12px 28px;
+      border-top: 1px solid var(--line);
+    }
+    .dots { display: flex; gap: 6px; flex-wrap: wrap; }
+    .dot {
+      width: 9px; height: 9px; border-radius: 99px;
+      border: 0; background: rgba(28,25,21,.18); cursor: pointer;
+    }
+    .dot.on { background: var(--teal); width: 22px; }
+    .nav { display: flex; gap: 8px; }
+    .nav button, .toc-btn, .chip {
+      border: 0;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .nav button { background: var(--teal); color: #fff; }
+    .nav button.ghost, .toc-btn, .chip { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+    .chip.on { background: var(--teal); color: #fff; border-color: var(--teal); }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 18px; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+    th { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: rgba(28,25,21,.5); }
+    .yes { color: #2f6f46; font-weight: 700; }
+    .no { color: rgba(28,25,21,.28); }
+    .work {
+      width: 100%;
+      text-align: left;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 16px 18px;
+      cursor: pointer;
+    }
+    .work + .work { margin-top: 10px; }
+    .work header { display: flex; justify-content: space-between; align-items: center; padding: 0; border: 0; background: none; }
+    .tasks { display: none; margin: 12px 0 0; padding: 0; list-style: none; }
+    .work.open .tasks { display: grid; gap: 8px; }
+    .tasks li {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      padding: 8px 10px;
+      background: var(--cream-2);
+      border-radius: 10px;
+      font-size: 14px;
+    }
+    .bar {
+      display: flex;
+      height: 18px;
+      border-radius: 99px;
+      overflow: hidden;
+      background: #e6dccb;
+      margin-top: 10px;
+    }
+    .bar span { display: block; height: 100%; }
+    .legend { display: flex; gap: 16px; font-size: 13px; margin-top: 10px; color: rgba(28,25,21,.65); }
+    .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 99px; margin-right: 6px; }
+    .toc {
+      display: none;
+      position: absolute;
+      right: 28px;
+      top: 64px;
+      width: 280px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 10px;
+      z-index: 5;
+      box-shadow: 0 12px 40px rgba(28,25,21,.12);
+    }
+    .toc.open { display: block; }
+    .toc button {
+      width: 100%;
+      text-align: left;
+      background: none;
+      border: 0;
+      padding: 8px 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .toc button:hover, .toc button.on { background: var(--cream-2); }
+    .stat { font-family: "Source Serif 4", Georgia, serif; font-size: 40px; color: var(--teal); }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    @media (max-width: 900px) {
+      .slide { padding: 24px 18px; }
+      .g2, .g3, .g4 { grid-template-columns: 1fr; }
+      header, footer { padding-left: 16px; padding-right: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="deck">
+    <header>
+      <div class="brand">Able Aura · Online Coaching</div>
+      <div class="meta" id="slideLabel">1 / 14 · Briefing</div>
+      <div class="row">
+        <button class="toc-btn" id="tocBtn" type="button">Contents</button>
+      </div>
+    </header>
+    <nav class="toc" id="toc"></nav>
+    <main class="slides" id="slides"></main>
+    <footer>
+      <div class="dots" id="dots"></div>
+      <div class="nav">
+        <button class="ghost" id="prev" type="button">Back</button>
+        <button id="next" type="button">Next</button>
+      </div>
+    </footer>
+  </div>
+  <script src="/team-plan.js"></script>
+</body>
+</html>
